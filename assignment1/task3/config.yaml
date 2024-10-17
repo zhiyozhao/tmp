@@ -1,12 +1,14 @@
 data:
-  data_type: eg1800
-  root_dir: /root/EG1800
-  image_dir: Images
-  label_dir: Labels
-  train_split: eg1800_train.txt
-  test_split: eg1800_test.txt
+  data_type: matting_human
+  root_dir: /kaggle/input/aisegmentcom-matting-human-datasets/
+  image_dir: clip_img
+  label_dir: matting
+  # train_split: eg1800_train.txt
+  # test_split: eg1800_test.txt
+  train_range: [0, 0.5]
+  test_range: [0.5, 0.6]
   input_size: [224, 224]
-  batch_size: 64
+  batch_size: 16
 
 model:
   backbone_type: resnet50

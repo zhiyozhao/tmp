@@ -9,24 +9,45 @@ from PIL import Image
 
 
 def build_data(data_cfg):
-    root_dir = data_cfg["root_dir"]
-    image_dir = data_cfg["image_dir"]
-    label_dir = data_cfg["label_dir"]
-    train_split = data_cfg["train_split"]
-    test_split = data_cfg["test_split"]
-    batch_size = data_cfg["batch_size"]
+    if data_cfg["data_type"] == "eg1800":
+        root_dir = data_cfg["root_dir"]
+        image_dir = data_cfg["image_dir"]
+        label_dir = data_cfg["label_dir"]
+        train_split = data_cfg["train_split"]
+        test_split = data_cfg["test_split"]
+        batch_size = data_cfg["batch_size"]
 
-    trans, mask_trans = default_transform(data_cfg)
+        trans, mask_trans = default_transform(data_cfg)
 
-    train_set = SegmentationDataset(
-        root_dir, image_dir, label_dir, train_split, trans, mask_trans
-    )
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+        train_set = SegmentationDataset(
+            root_dir, image_dir, label_dir, train_split, trans, mask_trans
+        )
+        train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
 
-    test_set = SegmentationDataset(
-        root_dir, image_dir, label_dir, test_split, trans, mask_trans
-    )
-    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
+        test_set = SegmentationDataset(
+            root_dir, image_dir, label_dir, test_split, trans, mask_trans
+        )
+        test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
+
+    elif data_cfg["data_type"] == "matting_human":
+        root_dir = data_cfg["root_dir"]
+        image_dir = data_cfg["image_dir"]
+        label_dir = data_cfg["label_dir"]
+        train_range = data_cfg["train_range"]
+        test_range = data_cfg["test_range"]
+        batch_size = data_cfg["batch_size"]
+
+        trans, mask_trans = default_transform(data_cfg)
+
+        train_set = MattingHuman(
+            root_dir, image_dir, label_dir, train_range, trans, mask_trans
+        )
+        train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+
+        test_set = MattingHuman(
+            root_dir, image_dir, label_dir, test_range, trans, mask_trans
+        )
+        test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
 
     return train_loader, test_loader
 
@@ -160,11 +181,14 @@ def default_transform(data_cfg):
 if __name__ == "__main__":
     train_loader, test_loader = build_data(
         {
+            "data_type": "matting_human",
             "root_dir": "/Users/zhao/Downloads/EG1800",
             "image_dir": "Images",
             "label_dir": "Labels",
             "train_split": "eg1800_train.txt",
             "test_split": "eg1800_test.txt",
+            "train_range": (0, 0.5),
+            "test_range": (0.5, 0.6),
             "input_size": (224, 224),
             "batch_size": 32,
         }
