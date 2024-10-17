@@ -1,4 +1,5 @@
 data:
+  data_type: eg1800
   root_dir: /root/EG1800
   image_dir: Images
   label_dir: Labels
@@ -12,7 +13,7 @@ model:
   num_classes: 1
 
 training:
-  epochs: 50
+  epochs: 30
   val_epochs: 5
   lr: 0.001
 

@@ -1,4 +1,5 @@
 from os.path import join
+from pathlib import Path
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -13,10 +14,9 @@ def build_data(data_cfg):
     label_dir = data_cfg["label_dir"]
     train_split = data_cfg["train_split"]
     test_split = data_cfg["test_split"]
-    input_size = data_cfg["input_size"]
     batch_size = data_cfg["batch_size"]
 
-    trans, mask_trans = default_transform(input_size)
+    trans, mask_trans = default_transform(data_cfg)
 
     train_set = SegmentationDataset(
         root_dir, image_dir, label_dir, train_split, trans, mask_trans
@@ -29,6 +29,48 @@ def build_data(data_cfg):
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
 
     return train_loader, test_loader
+
+
+class MattingHuman(Dataset):
+    def __init__(
+        self,
+        root_dir,
+        image_dir,
+        label_dir,
+        data_range=(0, 0.7),
+        transform=None,
+        mask_transform=None,
+    ):
+        self.root_dir = root_dir
+        self.image_dir = image_dir
+        self.label_dir = label_dir
+        self.data_range = data_range
+        self.transform = transform
+        self.mask_transform = mask_transform
+        self._load_image_names()
+        self.start_idx = data_range[0] * len(self.images)
+
+    def _load_image_names(self):
+        root_dir = Path(self.root_dir)
+        self.images = sorted(list(root_dir.glob(f"{self.image_dir}/*/*/*")))
+        self.labels = sorted(list(root_dir.glob(f"{self.label_dir}/*/*/*")))
+        assert len(self.images) == len(self.labels)
+
+    def __len__(self):
+        return len(self.images) * (self.data_range[1] - self.data_range[0])
+
+    def __getitem__(self, idx):
+        img_path = self.images[self.start_idx + idx]
+        mask_path = self.labels[self.start_idx + idx]
+
+        image = Image.open(img_path)
+        mask = Image.open(mask_path)
+
+        if self.transform:
+            image = self.transform(image)
+            mask = self.mask_transform(mask)
+
+        return image, mask
 
 
 class SegmentationDataset(Dataset):
@@ -63,8 +105,8 @@ class SegmentationDataset(Dataset):
         img_path = join(self.image_dir, img_name)
         mask_path = join(self.label_dir, img_name)
 
-        image = Image.open(img_path).convert("RGB")
-        mask = Image.open(mask_path).convert("L")
+        image = Image.open(img_path)
+        mask = Image.open(mask_path)
 
         if self.transform:
             image = self.transform(image)
@@ -79,7 +121,22 @@ class BinaryMaskToTensor:
         return mask_tensor
 
 
-def default_transform(input_size):
+class AlphaMaskToTensor:
+    def __call__(self, mask):
+        mask_tensor = torch.tensor(
+            np.array(mask)[:, :, 3] == 0, dtype=torch.float32
+        ).unsqueeze(0)
+        return mask_tensor
+
+
+mask_pipeline = {
+    "eg1800": BinaryMaskToTensor,
+    "matting_human": AlphaMaskToTensor,
+}
+
+
+def default_transform(data_cfg):
+    input_size = data_cfg["input_size"]
 
     transform = transforms.Compose(
         [
@@ -93,7 +150,7 @@ def default_transform(input_size):
             transforms.Resize(
                 input_size, interpolation=transforms.InterpolationMode.NEAREST
             ),
-            BinaryMaskToTensor(),
+            mask_pipeline[data_cfg["data_type"]](),
         ]
     )
 

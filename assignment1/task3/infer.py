@@ -78,7 +78,7 @@ def infer():
 
     # transform
     input_size = config["data"]["input_size"]
-    transform, _ = default_transform(input_size)
+    transform, _ = default_transform(config["data"])
 
     # Infer on images from a folder
     image_dir = config["infer"]["image_dir"]
