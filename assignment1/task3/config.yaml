@@ -8,15 +8,15 @@ data:
   train_range: [0, 0.5]
   test_range: [0.5, 0.6]
   input_size: [224, 224]
-  batch_size: 16
+  batch_size: 48
 
 model:
   backbone_type: resnet50
   num_classes: 1
 
 training:
-  epochs: 30
-  val_epochs: 5
+  epochs: 12
+  val_epochs: 3
   lr: 0.001
 
 infer:

@@ -73,8 +73,23 @@ class MattingHuman(Dataset):
 
     def _load_image_names(self):
         root_dir = Path(self.root_dir)
-        self.images = sorted(list(root_dir.glob(f"{self.image_dir}/*/*/*")))
-        self.labels = sorted(list(root_dir.glob(f"{self.label_dir}/*/*/*")))
+        self.images = sorted(list(root_dir.glob(f"{self.image_dir}/*/*/*jpg")))
+        self.labels = sorted(list(root_dir.glob(f"{self.label_dir}/*/*/*png")))
+
+        self.images = [
+            image
+            for image in self.images
+            if not "1803241125-00000005" in image.name
+            and not "1803201916-00000117" in image.name
+        ]
+        self.labels = [
+            label
+            for label in self.labels
+            if not "1803241125-00000005" in label.name
+            and not "1803201916-00000117" in label.name
+        ]
+
+        print(f"Images: {len(self.images)}, Labels: {len(self.labels)}")
         assert len(self.images) == len(self.labels)
 
     def __len__(self):
@@ -182,15 +197,15 @@ if __name__ == "__main__":
     train_loader, test_loader = build_data(
         {
             "data_type": "matting_human",
-            "root_dir": "/Users/zhao/Downloads/EG1800",
-            "image_dir": "Images",
-            "label_dir": "Labels",
+            "root_dir": "/kaggle/input/aisegmentcom-matting-human-datasets/",
+            "image_dir": "clip_img",
+            "label_dir": "matting",
             "train_split": "eg1800_train.txt",
             "test_split": "eg1800_test.txt",
             "train_range": (0, 0.5),
             "test_range": (0.5, 0.6),
             "input_size": (224, 224),
-            "batch_size": 32,
+            "batch_size": 16,
         }
     )
 
