@@ -69,7 +69,7 @@ class MattingHuman(Dataset):
         self.transform = transform
         self.mask_transform = mask_transform
         self._load_image_names()
-        self.start_idx = data_range[0] * len(self.images)
+        self.start_idx = int(data_range[0] * len(self.images))
 
     def _load_image_names(self):
         root_dir = Path(self.root_dir)
@@ -78,7 +78,7 @@ class MattingHuman(Dataset):
         assert len(self.images) == len(self.labels)
 
     def __len__(self):
-        return len(self.images) * (self.data_range[1] - self.data_range[0])
+        return int(len(self.images) * (self.data_range[1] - self.data_range[0]))
 
     def __getitem__(self, idx):
         img_path = self.images[self.start_idx + idx]
