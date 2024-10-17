@@ -10,7 +10,9 @@ from dataset import build_data
 from utils import save_checkpoint, parse_args, load_config, Iou
 
 
-def train_one_epoch(model, train_loader, criterion, optimizer, device, epoch, writer):
+def train_one_epoch(
+    model, train_loader, criterion, optimizer, scheduler, device, epoch, writer
+):
     model.train()
     running_loss = 0.0
 
@@ -25,15 +27,17 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, epoch, wr
 
         loss.backward()
         optimizer.step()
+        scheduler.step()
 
         running_loss += loss.item()
 
+        current_lr = optimizer.param_groups[0]["lr"]
         print(
-            f"Epoch: [{epoch}], Iter: [{i}/{len(train_loader)}], Loss: {loss.item():.4f}"
+            f"Epoch: [{epoch}], Iter: [{i}/{len(train_loader)}], Loss: {loss.item():.4f}, LR: {current_lr:.8f}"
         )
-
         global_step = (epoch - 1) * len(train_loader) + i
         writer.add_scalar("Training/Loss", loss.item(), global_step)
+        writer.add_scalar("Training/LR", current_lr, global_step)
 
 
 def validate(model, test_loader, loss_f, metric_f, device, epoch, writer):
@@ -90,6 +94,10 @@ def train():
     loss_f = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=config["training"]["lr"])
 
+    # Learning rate scheduler
+    total_iters = len(train_loader) * config["training"]["epochs"]
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_iters)
+
     # metric
     metric_f = Iou()
 
@@ -97,7 +105,9 @@ def train():
     best_loss = float("inf")
     for epoch in range(1, config["training"]["epochs"] + 1):
         # Train
-        train_one_epoch(model, train_loader, loss_f, optimizer, device, epoch, writer)
+        train_one_epoch(
+            model, train_loader, loss_f, optimizer, scheduler, device, epoch, writer
+        )
 
         # Validate
         if epoch % config["training"]["val_epochs"] == 0:
