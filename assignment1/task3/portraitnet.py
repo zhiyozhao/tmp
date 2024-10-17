@@ -3,6 +3,14 @@ import torch.nn as nn
 from torchvision import models
 
 
+def build_model(model_cfg):
+    model = PortraitNet(
+        backbone_type=model_cfg["backbone_type"], num_classes=model_cfg["num_classes"]
+    )
+
+    return model
+
+
 class PortraitNet(nn.Module):
     def __init__(self, backbone_type="resnet50", num_classes=1):
         super(PortraitNet, self).__init__()
@@ -103,7 +111,7 @@ class PortraitNet(nn.Module):
 
 
 if __name__ == "__main__":
-    model = PortraitNet(backbone_type="resnet34", num_classes=1)
+    model = build_model({"backbone_type": "resnet34", "num_classes": 1})
     dummy_input = torch.randn(3, 3, 224, 224)
     output = model(dummy_input)
     print(f"Output shape: {output.shape}")

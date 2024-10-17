@@ -1,21 +1,24 @@
 data:
-  root_dir: /Users/zhao/Downloads/EG1800
+  root_dir: /root/EG1800
   image_dir: Images
   label_dir: Labels
   train_split: eg1800_train.txt
   test_split: eg1800_test.txt
   input_size: [224, 224]
-  batch_size: 2
+  batch_size: 64
 
 model:
   backbone_type: resnet50
   num_classes: 1
 
 training:
-  epochs: 10
-  val_epochs: 10
-  lr: 0.0001
+  epochs: 50
+  val_epochs: 5
+  lr: 0.001
 
-work_dir: "./log"
+infer:
+  image_dir: TO_BE_SET
 
-device: "cuda"
+work_dir: log
+
+device: cuda

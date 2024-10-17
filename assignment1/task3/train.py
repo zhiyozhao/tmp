@@ -1,69 +1,16 @@
 import os
-import os.path as osp
-import argparse
 
-import yaml
 import torch
 from torch import nn
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 
-from portraitnet import PortraitNet
-from dataset import get_data_loader, default_transform
-from utils import save_checkpoint
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Train a portrait segmentation model")
-    parser.add_argument("--config", required=True, help="Path to config file")
-    return parser.parse_args()
+from portraitnet import build_model
+from dataset import build_data
+from utils import save_checkpoint, parse_args, load_config, Iou
 
 
-def load_config(config_path):
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
-    return config
-
-
-def build_model(config):
-    model_cfg = config["model"]
-    model = PortraitNet(
-        backbone_type=model_cfg["backbone_type"], num_classes=model_cfg["num_classes"]
-    )
-    device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
-    model = model.to(device)
-    return model, device
-
-
-def build_data(config):
-    data_cfg = config["data"]
-
-    batch_size = data_cfg["batch_size"]
-    image_dir = osp.join(data_cfg["root_dir"], data_cfg["image_dir"])
-    label_dir = osp.join(data_cfg["root_dir"], data_cfg["label_dir"])
-    train_split = osp.join(data_cfg["root_dir"], data_cfg["train_split"])
-    test_split = osp.join(data_cfg["root_dir"], data_cfg["test_split"])
-    trans, mask_trans = default_transform(data_cfg["input_size"])
-    train_loader = get_data_loader(
-        batch_size,
-        image_dir,
-        label_dir,
-        train_split,
-        trans,
-        mask_trans,
-    )
-    test_loader = get_data_loader(
-        batch_size,
-        image_dir,
-        label_dir,
-        test_split,
-        trans,
-        mask_trans,
-    )
-
-    return train_loader, test_loader
-
-
-def train_one_epoch(model, train_loader, criterion, optimizer, device, epoch):
+def train_one_epoch(model, train_loader, criterion, optimizer, device, epoch, writer):
     model.train()
     running_loss = 0.0
 
@@ -85,12 +32,14 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, epoch):
             f"Epoch: [{epoch}], Iter: [{i}/{len(train_loader)}], Loss: {loss.item():.4f}"
         )
 
-    return running_loss / len(train_loader)
+        global_step = (epoch - 1) * len(train_loader) + i
+        writer.add_scalar("Training/Loss", loss.item(), global_step)
 
 
-def validate(model, test_loader, criterion, device, epoch):
+def validate(model, test_loader, loss_f, metric_f, device, epoch, writer):
     model.eval()
     val_loss = 0.0
+    val_metric = 0.0
 
     with torch.no_grad():
         for i, (images, masks) in enumerate(test_loader, 1):
@@ -98,54 +47,76 @@ def validate(model, test_loader, criterion, device, epoch):
             masks = masks.to(device)
 
             outputs = model(images)
-            loss = criterion(outputs, masks)
+            loss = loss_f(outputs, masks)
+            metric = metric_f(outputs, masks)
 
             val_loss += loss.item()
+            val_metric += metric.item()
 
             print(
-                f"Epoch: [{epoch}], Val Iter: [{i}/{len(test_loader)}], Loss: {loss.item():.4f}"
+                f"Epoch: [{epoch}], Val Iter: [{i}/{len(test_loader)}], Loss: {loss.item():.4f}, Iou: {metric.item():.4f}"
             )
 
-    return val_loss / len(test_loader)
+    val_loss = val_loss / len(test_loader)
+    val_metric = val_metric / len(test_loader)
+
+    writer.add_scalar("Validation/Loss", val_loss, epoch)
+    writer.add_scalar("Validation/IoU", val_metric, epoch)
+
+    return val_loss, val_metric
 
 
-def main():
+def train():
     args = parse_args()
     config = load_config(args.config)
 
     # work_dir
     os.makedirs(config["work_dir"], exist_ok=True)
 
+    # TensorBoard writer
+    writer = SummaryWriter(log_dir=os.path.join(config["work_dir"], "logs"))
+
+    # device
+    device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
+
     # model
-    model, device = build_model(config)
+    model = build_model(config["model"])
+    model = model.to(device)
 
     # data
-    train_loader, test_loader = build_data(config)
+    train_loader, test_loader = build_data(config["data"])
 
     # loss
-    criterion = nn.BCEWithLogitsLoss()
+    loss_f = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=config["training"]["lr"])
+
+    # metric
+    metric_f = Iou()
 
     # Train and validate
     best_loss = float("inf")
     for epoch in range(1, config["training"]["epochs"] + 1):
         # Train
-        train_loss = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, epoch
-        )
-        print(f"Train Loss: {train_loss:.4f}")
+        train_one_epoch(model, train_loader, loss_f, optimizer, device, epoch, writer)
 
         # Validate
         if epoch % config["training"]["val_epochs"] == 0:
-            val_loss = validate(model, test_loader, criterion, device, epoch)
-            print(f"Validation Loss: {val_loss:.4f}")
+            val_loss, val_metric = validate(
+                model, test_loader, loss_f, metric_f, device, epoch, writer
+            )
 
-        # Save checkpoint if the validation loss has improved
-        if val_loss < best_loss:
-            best_loss = val_loss
-            save_checkpoint(model, optimizer, config["output"]["checkpoint_dir"], epoch)
-            print(f"Model saved at epoch {epoch + 1}")
+            save_checkpoint(
+                model, optimizer, config["work_dir"], epoch, val_loss < best_loss
+            )
+            print(f"Model saved at epoch {epoch}")
+
+            if val_loss < best_loss:
+                best_loss = val_loss
+            print(f"Validation Loss: {val_loss:.4f}, Validation IoU: {val_metric:.4f}")
+
+    # Close the TensorBoard writer
+    writer.close()
 
 
 if __name__ == "__main__":
-    main()
+    train()
