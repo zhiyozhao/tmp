@@ -7,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from portraitnet import build_model
 from dataset import build_data
-from utils import save_checkpoint, parse_args, load_config, Iou
+from utils import save_checkpoint, parse_args, load_config, mIou
 
 
 def train_one_epoch(
@@ -91,7 +91,7 @@ def train():
     train_loader, test_loader = build_data(config["data"])
 
     # loss
-    loss_f = nn.BCEWithLogitsLoss()
+    loss_f = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=config["training"]["lr"])
 
     # Learning rate scheduler
@@ -99,7 +99,7 @@ def train():
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=total_iters)
 
     # metric
-    metric_f = Iou()
+    metric_f = mIou()
 
     # Train and validate
     best_loss = float("inf")

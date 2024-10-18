@@ -48,8 +48,71 @@ def build_data(data_cfg):
             root_dir, image_dir, label_dir, test_range, trans, mask_trans
         )
         test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
+    elif data_cfg["data_type"] == "easy_portrait":
+        root_dir = data_cfg["root_dir"]
+        image_dir = data_cfg["image_dir"]
+        label_dir = data_cfg["label_dir"]
+        train_part = data_cfg["train_part"]
+        test_part = data_cfg["test_part"]
+        batch_size = data_cfg["batch_size"]
+
+        trans, mask_trans = default_transform(data_cfg)
+
+        train_set = EasyPortrait(
+            root_dir, image_dir, label_dir, train_part, trans, mask_trans
+        )
+        train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+
+        test_set = EasyPortrait(
+            root_dir, image_dir, label_dir, test_part, trans, mask_trans
+        )
+        test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
 
     return train_loader, test_loader
+
+
+class EasyPortrait(Dataset):
+    def __init__(
+        self,
+        root_dir,
+        image_dir,
+        label_dir,
+        part="train",
+        transform=None,
+        mask_transform=None,
+    ):
+        self.root_dir = root_dir
+        self.image_dir = image_dir
+        self.label_dir = label_dir
+        self.part = part
+        self.transform = transform
+        self.mask_transform = mask_transform
+        self._load_image_names()
+
+    def _load_image_names(self):
+        image_dir = Path(join(self.root_dir, self.image_dir, self.part))
+        label_dir = Path(join(self.root_dir, self.label_dir, self.part))
+        self.images = sorted(list(image_dir.glob("*jpg")))
+        self.labels = sorted(list(label_dir.glob("*png")))
+
+        print(f"Images: {len(self.images)}, Labels: {len(self.labels)}")
+        assert len(self.images) == len(self.labels)
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        img_path = self.images[idx]
+        mask_path = self.labels[idx]
+
+        image = Image.open(img_path)
+        mask = Image.open(mask_path)
+
+        if self.transform:
+            image = self.transform(image)
+            mask = self.mask_transform(mask)
+
+        return image, mask
 
 
 class MattingHuman(Dataset):
@@ -165,9 +228,16 @@ class AlphaMaskToTensor:
         return mask_tensor
 
 
+class MultiMaskToTensor:
+    def __call__(self, mask):
+        mask_tensor = torch.tensor(np.array(mask), dtype=torch.long)
+        return mask_tensor
+
+
 mask_pipeline = {
     "eg1800": BinaryMaskToTensor,
     "matting_human": AlphaMaskToTensor,
+    "easy_portrait": MultiMaskToTensor,
 }
 
 

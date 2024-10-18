@@ -1,18 +1,20 @@
 data:
-  data_type: matting_human
-  root_dir: /kaggle/input/aisegmentcom-matting-human-datasets/
-  image_dir: clip_img
-  label_dir: matting
+  data_type: easy_portrait
+  root_dir: /kaggle/input/easyportrait/
+  image_dir: images
+  label_dir: annotations
   # train_split: eg1800_train.txt
   # test_split: eg1800_test.txt
-  train_range: [0, 0.5]
-  test_range: [0.5, 0.6]
+  # train_range: [0, 0.5]
+  # test_range: [0.5, 0.6]
+  train_part: train
+  test_part: test
   input_size: [224, 224]
   batch_size: 48
 
 model:
   backbone_type: resnet50
-  num_classes: 1
+  num_classes: 9
 
 training:
   epochs: 12

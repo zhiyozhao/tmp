@@ -5,7 +5,7 @@ import torch
 
 from portraitnet import build_model
 from dataset import build_data
-from utils import parse_args, load_config, Iou
+from utils import parse_args, load_config, mIou
 
 
 def validate(model, test_loader, metric_f, device):
@@ -49,7 +49,7 @@ def test():
     _, test_loader = build_data(config["data"])
 
     # metric
-    metric_f = Iou()
+    metric_f = mIou()
 
     # testing
     val_metric = validate(model, test_loader, metric_f, device)

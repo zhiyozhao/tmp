@@ -25,6 +25,33 @@ class Iou:
         return iou
 
 
+class mIou:
+    def __call__(self, pred, target):
+        """
+        Input:
+            pred: (bs, c, h, w) logits
+            target: (bs, h, w) multi-class mask
+        """
+        pred_classes = torch.argmax(pred, dim=1)
+
+        num_classes = pred.shape[1]
+        iou_per_class = []
+
+        for cls_ in range(num_classes):
+            pred_is_cls = pred_classes == cls_
+            target_is_cls = target == cls_
+
+            intersection = torch.logical_and(pred_is_cls, target_is_cls).sum()
+            union = torch.logical_or(pred_is_cls, target_is_cls).sum()
+
+            iou = (intersection / (union + 1e-6)).item()
+            iou_per_class.append(iou)
+
+        mean_iou = sum(iou_per_class) / num_classes
+
+        return torch.tensor(mean_iou)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a portrait segmentation model")
     parser.add_argument("--config", required=True, help="Path to config file")
