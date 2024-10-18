@@ -22,3 +22,12 @@
   - [ ] EG1800 + ResNet50 -> Realworld
   - [ ] MattingHuman + ResNet50 -> Realworld
   - [ ] MattingHuman + ResNet50 -> EG1800
+
+## Submission
+
+- Codes are in current directory (including git versions)
+- Codes also accessible at My [Github Repo](https://github.com/zhiyozhao/tmp)
+- Ckpts can be found in the ouput tab of my Kaggle Notebooks (Colab is shitty):
+  - [MattingHuman + ResNet50](https://www.kaggle.com/code/kaggleeeeeeeeeeee/mattinghuman)
+  - [MattingHuman + ResNet34](https://www.kaggle.com/code/kaggleeeeeeeeeeee/mattingsmall)
+  - [EasyPortrait + ResNet50](https://www.kaggle.com/code/marcusliang12/easyportrait)
