@@ -1,0 +1,18 @@
+Follow the instructions for your OS to install the Python package manager conda:
+https://docs.conda.io/projects/conda/en/latest/user-guide/install/
+
+Open a terminal in this directory.
+
+Create a new environment named cv-assignment2 and install required packages (numpy, etc.) via running:
+conda env create -f environment.yml
+
+Note: A typical source of error is to use an old version of conda itself. You can update it via:
+conda update -n base conda -c anaconda
+
+Before running the code you need to activate the environment:
+conda activate cv-assignment2
+
+Depending on your configuration, you might instead need to run:
+source activate cv-assignment2
+
+You can now start running your code.
