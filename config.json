@@ -1,0 +1,21 @@
+{
+  "data_root": "/kaggle/input/visual-question-answering-computer-vision-nlp/dataset",
+  "train_csv": "data_train.csv",
+  "val_csv": "data_eval.csv",
+  "answer_space_file": "answer_space.txt",
+
+  "model_name": "openai/clip-vit-base-patch32",
+  "image_model_name": "google/vit-base-patch32-224",
+  "text_model_name": "bert-base-uncased",
+
+  "num_classes": 582,
+  "fusion_dim": 512,
+  "dropout_prob": 0.3,
+
+  "batch_size": 64,
+  "num_epochs": 100,
+  "learning_rate": 5e-4,
+  "checkpoint_dir": "./checkpoints",
+  "log_dir": "./logs",
+  "log_interval": 10
+}
